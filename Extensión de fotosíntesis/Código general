@@ -1,42 +1,83 @@
 #include "AS726X.h"
-
+#include "Wire.h"
+#include "RTClib.h" //Libreria para el DS3231
+#define DEBUG(a) Serial.println(a);
 AS726X sensor;
-
-float r[7];
-
+RTC_DS3231 rtc;  // Creación del objeto RTC
+float r[2];
+unsigned long time;
 void setup() {
   Wire.begin();
   Serial.begin(9600);
 
   sensor.begin();
-
-  if (sensor.getVersion() == SENSORTYPE_AS7262) {
-    Serial.print("V\tB\tG\tY\tO\tR\tt\n");
-  } else if (sensor.getVersion() == SENSORTYPE_AS7263) {
-    Serial.print("R\tS\tT\tU\tV\tW\tt\n");
-  } else {
-    Serial.print("error\n");
-    while(1);
+  if (!rtc.begin()) {  // Inicializa el RTC
+    Serial.println("No se encuentra el RTC");
+    while (1);
   }
+
+  if (rtc.lostPower()) {  // Si el RTC perdió energía, ajustar la hora a la actual
+    Serial.println("RTC perdió energía, estableciendo la hora...");
+    rtc.adjust(DateTime(F(_DATE), F(TIME_)));  // Ajustar con la hora de compilación
+  }
+  // if (sensor.getVersion() == SENSORTYPE_AS7262) {
+  //   Serial.print("V\tB\tG\tY\tO\tR\tt\n");
+  // } else if (sensor.getVersion() == SENSORTYPE_AS7263) {
+  //   Serial.print("R\tS\tT\tU\tV\tW\tt\n");
+  // } else {
+  //   Serial.print("error\n");
+  //   while(1);
+  // }
 
 }
 
 void loop() {
   sensor.takeMeasurements();
 
-  r[0] = sensor.getCalibratedViolet();
-  r[1] = sensor.getCalibratedBlue();
-  r[2] = sensor.getCalibratedGreen();
-  r[3] = sensor.getCalibratedYellow();    
-  r[4] = sensor.getCalibratedOrange();
-  r[5] = sensor.getCalibratedRed();
 
-  r[6] = sensor.getTemperature();
+  r[0] = sensor.getCalibratedBlue();
+  r[1] = sensor.getCalibratedRed();
+  r[2] = sensor.getTemperature();
   
-  for (int i = 0; i <= 7; i++) {
-    Serial.print(r[i]);  
-    Serial.print("\t");
+  // for (int i = 0; i <= 7; i++) {
+  //   Serial.print(r[i]);  
+  //   Serial.print("\t");
+  // }
+  // Serial.print("\n");
+
+  DateTime now = rtc.now();  // Obtener la fecha y hora actual
+  
+  // Guardar horas, minutos y segundos en variables
+  int currentHour = now.hour();
+  int currentMinute = now.minute();
+  int currentSecond = now.second();
+
+  // Imprimir hora actual
+  Serial.print("Hora actual: ");
+  Serial.print(currentHour);
+  Serial.print(':');
+  Serial.print(currentMinute);
+  Serial.print(':');
+  Serial.println(currentSecond);
+
+  // Ejemplo de condicional: si la hora es 15:30:00, hacer algo
+  if (currentHour >= 20 && currentHour <= 6) {
+    Serial.println("No haga nada");
+    Serial.println("Apagar LEDs");
+    // Aquí podrías agregar la acción que quieres ejecutar
   }
-  Serial.print("\n");
-  delay(1000);
+  else {
+    if (r[0]>200 && r[0]<100 || r[1]>200 && r[1]<100) {
+        Serial.println("La cantidad de luz es suficiente");
+        Serial.println("Apagar LEDs");
+    }
+    else () {
+        Serial.println("Encender LEDs");
+    }
+  }
+  delay(60000);  // Esperar 1 minuto para volver a verificar la cantidad de luz. 
 }
+
+
+
+
